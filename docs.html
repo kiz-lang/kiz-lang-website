@@ -134,7 +134,8 @@
             content.className = 'content loading';
             content.textContent = '加载中…';
             try {
-                const resp = await fetch(REPO_RAW + encodeURIComponent(name));
+                const bust = Date.now(); // 回源取最新文档（绕过raw CDN的5分钟边缘缓存）
+        const resp = await fetch(REPO_RAW + encodeURIComponent(name) + '?t=' + bust, { cache: 'no-store' });
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 const md = await resp.text();
                 content.className = 'content';
@@ -179,7 +180,7 @@
 
         async function init() {
             try {
-                const resp = await fetch(REPO_API);
+                const resp = await fetch(REPO_API, { cache: 'no-store' });
                 const entries = await resp.json();
                 docFiles = entries
                     .filter(e => e.type === 'file' && e.name.endsWith('.md'))
