@@ -207,29 +207,51 @@
             macosBtn: /macos-(arm64|x64)\.zip$/
         };
 
-        async function loadLatestRelease() {
+        const FALLBACK_URL = 'https://github.com/kiz-lang/kizi/releases/latest';
+
+        // 失败兜底：按钮始终可点，最坏情况跳Releases页手动选择
+        function fallbackButtons() {
+            for (const btnId of Object.keys(PLATFORM_PATTERNS)) {
+                const b = document.getElementById(btnId);
+                b.classList.remove('disabled');
+                if (!b.getAttribute('href') || b.getAttribute('href') === '#') {
+                    b.href = FALLBACK_URL;
+                }
+            }
+        }
+
+        async function loadLatestRelease(retries = 3) {
             try {
-                const resp = await fetch('https://api.github.com/repos/kiz-lang/kizi/releases/latest');
+                // no-store：避免缓存到资产尚未上传时的空release响应
+                const resp = await fetch('https://api.github.com/repos/kiz-lang/kizi/releases/latest', { cache: 'no-store' });
                 const release = await resp.json();
                 if (release.tag_name) {
                     document.getElementById('versionTitle').textContent =
                         '下载 Kiz ' + release.tag_name + ' (2026.2 rc)';
                 }
                 const assets = release.assets || [];
+                let matched = 0;
                 for (const [btnId, pattern] of Object.entries(PLATFORM_PATTERNS)) {
                     const asset = assets.find(a => pattern.test(a.name));
                     const btn = document.getElementById(btnId);
                     if (asset && btn) {
                         btn.href = asset.browser_download_url;
-                    } else if (btn) {
-                        btn.classList.add('disabled');
+                        matched++;
                     }
                 }
+                // Release刚创建时资产可能还没上传完：稍候重试
+                if (matched < Object.keys(PLATFORM_PATTERNS).length && retries > 0) {
+                    await new Promise(r => setTimeout(r, 2500));
+                    return loadLatestRelease(retries - 1);
+                }
+                fallbackButtons();
             } catch (err) {
-                // API 不可用时退回 Releases 页面
-                document.querySelectorAll('.download-buttons .btn').forEach(b => {
-                    b.href = 'https://github.com/kiz-lang/kizi/releases/latest';
-                });
+                // API不可达（大陆网络常见）：不灰置按钮，直接指向Releases页
+                for (const btnId of Object.keys(PLATFORM_PATTERNS)) {
+                    const b = document.getElementById(btnId);
+                    b.classList.remove('disabled');
+                    b.href = FALLBACK_URL;
+                }
             }
         }
 
