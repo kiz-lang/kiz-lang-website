@@ -200,26 +200,7 @@
     </div>
 
     <script>
-        // 从 GitHub Releases 动态解析最新版本与各平台资产（发新版本后页面自动跟随）
-        const PLATFORM_PATTERNS = {
-            windowsBtn: /windows-x64\.zip$/,
-            linuxBtn: /linux-x64\.zip$/,
-            macosBtn: /macos-(arm64|x64)\.zip$/
-        };
-
-        const FALLBACK_URL = 'https://github.com/kiz-lang/kizi/releases/latest';
-
-        // 失败兜底：按钮始终可点，最坏情况跳Releases页手动选择
-        function fallbackButtons() {
-            for (const btnId of Object.keys(PLATFORM_PATTERNS)) {
-                const b = document.getElementById(btnId);
-                b.classList.remove('disabled');
-                if (!b.getAttribute('href') || b.getAttribute('href') === '#') {
-                    b.href = FALLBACK_URL;
-                }
-            }
-        }
-
+        // 下载按钮为静态直链（releases/latest/download 固定名资产，随最新release跟随）
         // 标题跟随最新release（可选增强：失败时保持HTML静态默认值，按钮为静态直链不受影响）
         async function loadLatestRelease() {
             try {
