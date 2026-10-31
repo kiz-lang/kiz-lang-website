@@ -72,6 +72,7 @@
     <nav class="navbar">
         <a class="brand" href="/">Kiz</a>
         <div class="links">
+            <a href="/">主页</a>
             <a href="https://try.kiz.i2pl.com" target="_blank">在线运行</a>
             <a href="https://github.com/kiz-lang/kizi" target="_blank">GitHub</a>
             <a href="/#download">下载</a>
@@ -89,9 +90,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
-        // 文档来源：kizi 主仓库的 docs/ 目录（发布新文档后自动跟随）
-        const REPO_API = 'https://api.github.com/repos/kiz-lang/kizi/contents/docs';
-        const REPO_RAW = 'https://raw.githubusercontent.com/kiz-lang/kizi/main/docs/';
+        // 文档来源：本仓库 docs/ 目录的副本（由 sync-docs Action 从 kizi 主仓库同步）
+        // 同域拉取不依赖 GitHub API/raw，大陆网络与限流均不影响
+        const REPO_RAW = './docs/';
         const REPO_TREE = 'https://github.com/kiz-lang/kizi/tree/main/docs';
 
         // 固定阅读顺序（未列出的文档按文件名追加在后）
@@ -179,22 +180,10 @@
             }
         }
 
-        async function init() {
-            try {
-                const resp = await fetch(REPO_API, { cache: 'no-store' });
-                const entries = await resp.json();
-                docFiles = entries
-                    .filter(e => e.type === 'file' && e.name.endsWith('.md'))
-                    .map(e => e.name)
-                    .sort((a, b) => orderKey(a) - orderKey(b) || a.localeCompare(b, 'zh'));
-                if (docFiles.length === 0) throw new Error('docs 目录为空');
-            } catch (err) {
-                showError('文档列表加载失败：' + err.message);
-                return;
-            }
-            route();
-            window.addEventListener('hashchange', route);
-        }
+        // 列表硬编码：稳定、零依赖；新增文档时在 DOC_ORDER 中登记即可
+        docFiles = [...DOC_ORDER];
+        route();
+        window.addEventListener('hashchange', route);
 
         if (window.marked) marked.setOptions({ breaks: true });
         init();

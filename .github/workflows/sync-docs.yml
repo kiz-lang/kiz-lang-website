@@ -1,0 +1,42 @@
+name: Sync docs from kizi
+
+# 手动触发：从 kizi 主仓库同步 docs/ 的 markdown 副本到本仓库
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch docs from kizi main
+        run: |
+          python3 - <<'PY'
+          import urllib.parse, urllib.request, os
+
+          docs = [
+              "快速开始.md", "语法特性速览.md", "内置对象&库速览.md",
+              "从Python过渡到Kiz.md", "kiz示例代码与讲解.md", "kiz库开发指南.md",
+              "使用ai写kiz程序指南.md", "从源代码构建kiz指南.md",
+              "xmake构建教程.md", "项目结构与功能说明.md", "提交指南.md",
+          ]
+          os.makedirs("docs", exist_ok=True)
+          base = "https://raw.githubusercontent.com/kiz-lang/kizi/main/docs/"
+          for name in docs:
+              url = base + urllib.parse.quote(name)
+              data = urllib.request.urlopen(url).read()
+              with open(os.path.join("docs", name), "wb") as f:
+                  f.write(data)
+              print("synced:", name, len(data), "bytes")
+          PY
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs
+          git diff --cached --quiet || (git commit -m "sync docs from kizi main" && git push)
