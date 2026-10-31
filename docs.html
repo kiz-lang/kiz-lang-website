@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiz 文档</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f9f9f9; color: #1f2937; }
+        /* 顶栏 */
+        .navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 32px; background: white;
+            border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 10;
+        }
+        .navbar .brand { font-weight: 700; font-size: 1.1rem; color: #1f2937; text-decoration: none; }
+        .navbar .links { display: flex; gap: 24px; }
+        .navbar a { text-decoration: none; color: #374151; font-weight: 500; }
+        .navbar a:hover { color: #2563eb; }
+        /* 布局 */
+        .layout { display: flex; max-width: 1200px; margin: 0 auto; min-height: calc(100vh - 55px); }
+        /* 侧边栏 */
+        .sidebar {
+            width: 260px; flex-shrink: 0; padding: 24px 12px;
+            border-right: 1px solid #e5e7eb; background: white;
+        }
+        .sidebar h3 { font-size: 0.8rem; color: #9ca3af; padding: 0 12px 8px; letter-spacing: 0.05em; }
+        .sidebar a {
+            display: block; padding: 8px 12px; margin: 2px 0;
+            color: #374151; text-decoration: none; border-radius: 6px; font-size: 0.92rem;
+            word-break: break-all;
+        }
+        .sidebar a:hover { background: #f3f4f6; }
+        .sidebar a.active { background: #eff6ff; color: #2563eb; font-weight: 600; }
+        /* 内容区 */
+        .content { flex: 1; padding: 36px 44px; background: white; min-width: 0; }
+        .content.loading { color: #9ca3af; }
+        /* markdown 渲染样式 */
+        .content h1, .content h2, .content h3, .content h4 { margin: 1.2em 0 0.6em; color: #111827; }
+        .content h1 { font-size: 1.9rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.3em; }
+        .content h2 { font-size: 1.4rem; border-bottom: 1px solid #f3f4f6; padding-bottom: 0.25em; }
+        .content p, .content li { line-height: 1.75; font-size: 0.98rem; }
+        .content ul, .content ol { padding-left: 1.6em; margin: 0.6em 0; }
+        .content code {
+            background: #f3f4f6; padding: 2px 6px; border-radius: 4px;
+            font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 0.88rem;
+        }
+        .content pre {
+            background: #f6f8fa; border-radius: 8px; padding: 16px;
+            overflow-x: auto; margin: 1em 0; border: 1px solid #e5e7eb;
+        }
+        .content pre code { background: none; padding: 0; }
+        .content table { border-collapse: collapse; margin: 1em 0; width: 100%; }
+        .content th, .content td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+        .content th { background: #f9fafb; }
+        .content blockquote {
+            border-left: 4px solid #2563eb; padding: 4px 16px; margin: 1em 0;
+            color: #4b5563; background: #f9fafb; border-radius: 0 6px 6px 0;
+        }
+        .content a { color: #2563eb; }
+        .content hr { border: none; border-top: 1px solid #e5e7eb; margin: 2em 0; }
+        .error-box {
+            background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
+            padding: 16px; border-radius: 8px; margin: 24px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a class="brand" href="/">Kiz</a>
+        <div class="links">
+            <a href="https://try.kiz.i2pl.com" target="_blank">在线运行</a>
+            <a href="https://github.com/kiz-lang/kizi" target="_blank">GitHub</a>
+            <a href="/#download">下载</a>
+        </div>
+    </nav>
+
+    <div class="layout">
+        <div class="sidebar">
+            <h3>DOCUMENTATION</h3>
+            <div id="docList"><a>加载中…</a></div>
+        </div>
+        <div class="content" id="content">加载中…</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        // 文档来源：kizi 主仓库的 docs/ 目录（发布新文档后自动跟随）
+        const REPO_API = 'https://api.github.com/repos/kiz-lang/kizi/contents/docs';
+        const REPO_RAW = 'https://raw.githubusercontent.com/kiz-lang/kizi/main/docs/';
+        const REPO_TREE = 'https://github.com/kiz-lang/kizi/tree/main/docs';
+
+        // 固定阅读顺序（未列出的文档按文件名追加在后）
+        const DOC_ORDER = [
+            '快速开始.md', '语法特性速览.md', '内置对象&库速览.md',
+            '从Python过渡到Kiz.md', 'kiz示例代码与讲解.md', 'kiz库开发指南.md',
+            '使用ai写kiz程序指南.md', '从源代码构建kiz指南.md',
+            'xmake构建教程.md', '项目结构与功能说明.md', '提交指南.md'
+        ];
+        const DEFAULT_DOC = '快速开始.md';
+
+        let docFiles = [];
+
+        function orderKey(name) {
+            const i = DOC_ORDER.indexOf(name);
+            return i === -1 ? DOC_ORDER.length + 100 : i;
+        }
+
+        function renderSidebar(current) {
+            const list = document.getElementById('docList');
+            list.innerHTML = '';
+            for (const name of docFiles) {
+                const a = document.createElement('a');
+                a.textContent = name.replace(/\.md$/, '');
+                a.href = '#/doc/' + encodeURIComponent(name);
+                if (name === current) a.classList.add('active');
+                list.appendChild(a);
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById('content').innerHTML =
+                '<div class="error-box">' + msg +
+                '<br>你也可以直接到 <a href="' + REPO_TREE + '" target="_blank">GitHub 文档目录</a> 阅读。</div>';
+        }
+
+        async function loadDoc(name) {
+            renderSidebar(name);
+            document.title = name.replace(/\.md$/, '') + ' - Kiz 文档';
+            const content = document.getElementById('content');
+            content.className = 'content loading';
+            content.textContent = '加载中…';
+            try {
+                const resp = await fetch(REPO_RAW + encodeURIComponent(name));
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const md = await resp.text();
+                content.className = 'content';
+                content.innerHTML = marked.parse(md);
+                // 文档间的相对 .md 链接改写为站内路由；外部链接新窗口打开
+                for (const a of content.querySelectorAll('a')) {
+                    let href = a.getAttribute('href') || '';
+                    if (href.endsWith('.md')) {
+                        // 源文档里的链接可能已URL编码，先解码还原中文文件名再统一编码进路由
+                        try { href = decodeURIComponent(href); } catch (e) {}
+                        const base = href.split('/').pop();
+                        a.href = '#/doc/' + encodeURIComponent(base);
+                    } else if (href.startsWith('http')) {
+                        a.target = '_blank';
+                    }
+                }
+                for (const block of content.querySelectorAll('pre code')) {
+                    if (window.hljs) window.hljs.highlightElement(block);
+                }
+                window.scrollTo(0, 0);
+            } catch (err) {
+                showError('文档《' + name + '》加载失败：' + err.message);
+            }
+        }
+
+        function route() {
+            const hash = location.hash;
+            const m = hash.match(/^#\/doc\/(.+)$/);
+            if (m) {
+                const name = decodeURIComponent(m[1]);
+                if (docFiles.includes(name)) {
+                    loadDoc(name);
+                    return;
+                }
+            }
+            const fallback = docFiles.includes(DEFAULT_DOC) ? DEFAULT_DOC : docFiles[0];
+            if (fallback) {
+                loadDoc(fallback);
+                history.replaceState(null, '', '#/doc/' + encodeURIComponent(fallback));
+            }
+        }
+
+        async function init() {
+            try {
+                const resp = await fetch(REPO_API);
+                const entries = await resp.json();
+                docFiles = entries
+                    .filter(e => e.type === 'file' && e.name.endsWith('.md'))
+                    .map(e => e.name)
+                    .sort((a, b) => orderKey(a) - orderKey(b) || a.localeCompare(b, 'zh'));
+                if (docFiles.length === 0) throw new Error('docs 目录为空');
+            } catch (err) {
+                showError('文档列表加载失败：' + err.message);
+                return;
+            }
+            route();
+            window.addEventListener('hashchange', route);
+        }
+
+        if (window.marked) marked.setOptions({ breaks: true });
+        init();
+    </script>
+</body>
+</html>
