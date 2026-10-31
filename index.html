@@ -128,8 +128,26 @@
         .btn-secondary:hover {
             background-color: #e5e7eb;
         }
+        .btn.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
         .btn i {
             font-size: 0.9rem;
+        }
+        /* Unix 解压提示 */
+        .unix-tip {
+            margin-top: 16px;
+            font-size: 0.85rem;
+            color: #6b7280;
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 10px 14px;
+        }
+        .unix-tip code {
+            background: #e5e7eb;
+            padding: 2px 6px;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -138,6 +156,7 @@
     <nav class="navbar">
         <a href="https://try.kiz.i2pl.com" target="_blank">在线运行</a>
         <a href="https://doc.kiz.i2pl.com" target="_blank">文档</a>
+        <a href="https://github.com/kiz-lang/kizi" target="_blank">GitHub</a>
     </nav>
 
     <!-- 页面头部 -->
@@ -149,49 +168,84 @@
     <!-- 版本卡片 -->
     <div class="version-card">
         <div class="card-header">
-            <h2>下载Kiz 2026.1</h2>
+            <h2 id="versionTitle">下载 Kiz v0.10.0 (2026.2 rc)</h2>
             <span class="latest-badge">最新版本</span>
         </div>
         <div class="card-body">
             <div class="update-list">
                 <h3>本次更新:</h3>
                 <ul>
-                    <li>实现kiz2026.1特性文档中的所有功能</li>
+                    <li>闭包捕获变量改为共享 Cell,kiz 通过 Knuth man-or-boy 测试(与 Lua 逐值一致)</li>
+                    <li>新增 GitHub Release 自动打包:三平台二进制开箱即用</li>
+                    <li>新增 mcpp 构建支持与版本号一键更新脚本</li>
+                    <li>新增基准测试与压力测试套件</li>
                 </ul>
             </div>
             <div class="download-buttons">
-                <a id="primaryBtn" class="btn btn-primary" href="#" target="_blank">
-                    <i>⬇️</i> 下载 Windows 版本
+                <a id="windowsBtn" class="btn btn-primary" href="#">
+                    <i>⬇️</i> Windows x64
                 </a>
-                <a id="secondaryBtn" class="btn btn-secondary" href="#" target="_blank">
-                    <i>⬇️</i> Linux 版本
+                <a id="linuxBtn" class="btn btn-secondary" href="#">
+                    <i>⬇️</i> Linux x64
                 </a>
+                <a id="macosBtn" class="btn btn-secondary" href="#">
+                    <i>⬇️</i> macOS
+                </a>
+            </div>
+            <div class="unix-tip">
+                Unix 用户解压后请先 <code>chmod +x kiz.elf</code> 再运行。
+                所有历史版本见 <a href="https://github.com/kiz-lang/kizi/releases" target="_blank">GitHub Releases</a>。
             </div>
         </div>
     </div>
 
     <script>
-        // 平台检测逻辑
-        const isWindows = navigator.platform.includes('Win');
-        const winUrl = 'https://kiz.i2pl.com/download/kiz2026/kiz.exe';
-        const linuxUrl = 'https://kiz.i2pl.com/download/kiz2026/kiz.elf';
+        // 从 GitHub Releases 动态解析最新版本与各平台资产（发新版本后页面自动跟随）
+        const PLATFORM_PATTERNS = {
+            windowsBtn: /windows-x64\.zip$/,
+            linuxBtn: /linux-x64\.zip$/,
+            macosBtn: /macos-(arm64|x64)\.zip$/
+        };
 
-        const primaryBtn = document.getElementById('primaryBtn');
-        const secondaryBtn = document.getElementById('secondaryBtn');
-
-        if (isWindows) {
-            // Windows 用户
-            primaryBtn.href = winUrl;
-            primaryBtn.innerHTML = '<i>⬇️</i> 下载 Windows 版本';
-            secondaryBtn.href = linuxUrl;
-            secondaryBtn.innerHTML = '<i>⬇️</i> Linux 版本';
-        } else {
-            // 非Windows用户（默认Linux）
-            primaryBtn.href = linuxUrl;
-            primaryBtn.innerHTML = '<i>⬇️</i> 下载 Linux 版本';
-            secondaryBtn.href = winUrl;
-            secondaryBtn.innerHTML = '<i>⬇️</i> Windows 版本';
+        async function loadLatestRelease() {
+            try {
+                const resp = await fetch('https://api.github.com/repos/kiz-lang/kizi/releases/latest');
+                const release = await resp.json();
+                if (release.tag_name) {
+                    document.getElementById('versionTitle').textContent =
+                        '下载 Kiz ' + release.tag_name + ' (2026.2 rc)';
+                }
+                const assets = release.assets || [];
+                for (const [btnId, pattern] of Object.entries(PLATFORM_PATTERNS)) {
+                    const asset = assets.find(a => pattern.test(a.name));
+                    const btn = document.getElementById(btnId);
+                    if (asset && btn) {
+                        btn.href = asset.browser_download_url;
+                    } else if (btn) {
+                        btn.classList.add('disabled');
+                    }
+                }
+            } catch (err) {
+                // API 不可用时退回 Releases 页面
+                document.querySelectorAll('.download-buttons .btn').forEach(b => {
+                    b.href = 'https://github.com/kiz-lang/kizi/releases/latest';
+                });
+            }
         }
+
+        // 按用户平台排布主按钮顺序
+        (function reorderForPlatform() {
+            const buttons = document.querySelector('.download-buttons');
+            const ua = navigator.userAgent;
+            const preferred = ua.includes('Win') ? 'windowsBtn'
+                : (ua.includes('Mac') ? 'macosBtn' : 'linuxBtn');
+            const primary = document.getElementById(preferred);
+            primary.classList.remove('btn-secondary');
+            primary.classList.add('btn-primary');
+            buttons.prepend(primary);
+        })();
+
+        loadLatestRelease();
     </script>
 </body>
 </html>
